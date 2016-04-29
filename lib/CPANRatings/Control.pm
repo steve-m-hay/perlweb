@@ -3,11 +3,16 @@ use Moose;
 extends qw(Combust::Control Combust::Control::Bitcard::DBIC Combust::Control::StaticFiles);
 use LWP::Simple qw(get);
 use CPANRatings::Schema;
+use CPANRatings::Model::SearchCPAN;
 use Digest::SHA qw(sha1_hex);
 use Encode qw();
 use Combust::Constant qw(OK);
 use PerlOrg::Template::Filters;
 use XML::RSS;
+use JSON;
+use DateTime::Format::ISO8601;
+use DateTime::Format::W3CDTF;
+use DateTime;
 
 has schema => (
     isa => 'CPANRatings::Schema',
@@ -62,6 +67,70 @@ sub _calc_auth_token {
     return '1-' . sha1_hex('8wae4ko -  this is very secret!' . $cookie);
 }
 
+sub as_json {
+    my ($self, $reviews, $mode, $id) = @_;
+
+    my $data = {
+        $mode => $id,
+        reviews => [],
+    };
+
+    # default to one year being outdated...
+    my $outdated = DateTime->now->subtract( years => 1 );
+
+    if ( $mode eq 'distribution' ) {
+        # go by date of latest version
+        my $search = CPANRatings::Model::SearchCPAN->new;
+        if ( my $releases = $search->get_releases( $id ) ) {
+            my $last_release_date = DateTime::Format::ISO8601->parse_datetime(
+                $releases->[0]->{released}
+            );
+
+            # if last release date was within the last year, then use the last
+            # release date as the cutoff point
+            $outdated = $last_release_date
+                if $last_release_date > $outdated;
+        }
+    }
+
+    my %sum;
+
+    while (my $review = $reviews->next) {
+
+        my $is_outdated = ( $review->updated < $outdated ) ? 1 : 0;
+        my $review_for_data = {
+            review   => $review->review,
+            version  => $review->version_reviewed,
+            status   => $review->status,
+            rating   => int( $review->rating_overall ),
+            user     => $review->user_name,
+            date     => $review->updated->iso8601,
+            outdated => $is_outdated ? JSON::true : JSON::false,
+            helpful  => $review->helpful_score > 0 ? JSON::true : JSON::false,
+        };
+
+        $sum{all}    += $review->helpful_score > 0 ? int( $review->rating_overall ) : 0;
+        $sum{recent} += ! $is_outdated && $review->helpful_score > 0
+            ? int( $review->rating_overall ) : 0;
+
+        push( @{ $data->{reviews} },$review_for_data );
+    }
+
+    if ( my @reviews = @{ $data->{reviews} } ) {
+
+        my @all     = grep { $_->{helpful} } @reviews;
+        my @recent  = grep { $_->{helpful} && !$_->{outdated} } @reviews;
+
+        $data->{ratings} = {
+            all    => @all    ? sprintf( "%.1f",$sum{all} / @all ) : undef,
+            recent => @recent ? sprintf( "%.1f",$sum{recent} / @recent ) : undef,
+        };
+    } else {
+        $data->{ratings} = {};
+    }
+
+    return JSON->new->utf8->encode( $data );
+}
 
 sub as_rss {
   my ($self, $reviews, $mode, $id) = @_;
@@ -96,9 +165,8 @@ sub as_rss {
 
   my $i; 
   while (my $review = $reviews->next) {
-    my $text = $review->review; # substr($review->review, 0, 150);
-    #$text .= " ..." if (length $text < length $review->review);
-    $text = "Rating: ". $review->rating_overall . " stars\n" . $text
+    my $text = "<p>@{[$review->review_html]}</p>";
+    $text = "<p>Rating: @{[$review->rating_overall]} stars</p>$text"
       if ($review->rating_overall);
     $rss->add_item(
 		   title       => (!$mode || $mode eq "author" ? $review->distribution : $review->user_name),
@@ -106,6 +174,7 @@ sub as_rss {
                    description => $text,
                    dc => {
                           creator  => $review->user_name,
+                          date  => DateTime::Format::W3CDTF->new->format_datetime( $review->updated ),
                          },
                   );    
     last if ++$i == 20;
