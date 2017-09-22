@@ -25,3 +25,7 @@ cpan/
 junit_output.xml
 
 docs/learn/faq/perlglossary.html
+
+.DS_Store
+
+node_modules/
