@@ -4,7 +4,7 @@
 
 # stupid idiots
 
-/cgi-bin/formmail/.*   http://www.army.mil/
-/_vti_bin/.*	       http://www.af.mil/
-/_vti_inf.*	       http://www.whitehouse.gov/
-/MSOffice/.*	       http://www.navy.mil/
+/cgi-bin/formmail/.*   http://tp.never.us:8080/cgi-bin/formmail/
+/_vti_bin/.*	       http://tp.never.us:8080/_vti_bin/
+/_vti_inf.*	           http://tp.never.us:8080/_vti_info/
+/MSOffice/.*	       http://tp.never.us:8080/MSOffice/
