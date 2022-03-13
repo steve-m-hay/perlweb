@@ -1,4 +1,4 @@
-FROM quay.io/perl/base-os:v3.11.6
+FROM harbor.ntppool.org/perlorg/base-os:3.15.0-1
 
 # Note that this only builds dependencies and such, it doesn't
 # actually include the site code etc itself. The site code
@@ -7,14 +7,13 @@ FROM quay.io/perl/base-os:v3.11.6
 
 # Cache buster for occasionally resetting the cached images even if
 # the base doesn't change.
-ENV LAST_UPDATED 2020-06-07
+ENV LAST_UPDATED 2021-08-24
 
 USER root
 
 RUN apk update; apk upgrade ; apk add curl git \
   perl-dev wget make \
-  inotify-tools \
-  expat-dev zlib-dev libressl-dev libressl \
+  expat-dev zlib-dev \
   mariadb-client mariadb-dev build-base
 
 ADD .modules /tmp/modules.txt
