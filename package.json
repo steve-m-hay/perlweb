@@ -3,10 +3,21 @@
   "description": "Perl Org",
   "homepage": "http://www.perl.org",
   "version": "0.1.0",
+  "scripts": {
+    "build": "gulp",
+    "watch": "gulp watch"
+  },
   "devDependencies": {
-    "grunt": "^1.5.3",
-    "grunt-contrib-less": "^3.0.0",
-    "grunt-contrib-uglify": "^5.0.1",
-    "grunt-contrib-watch": "^1.1.0"
+    "bootstrap": "^5.3.3",
+    "@popperjs/core": "^2.11.8",
+    "gulp": "^5.0.1",
+    "gulp-clean-css": "^4.3.0",
+    "gulp-concat": "^2.6.1",
+    "gulp-header": "^2.0.12",
+    "gulp-if": "^3.0.0",
+    "gulp-sass": "^6.0.0",
+    "sass": "^1.77.8",
+    "gulp-purgecss": "^8.0.0",
+    "gulp-terser": "^2.1.0"
   }
 }
